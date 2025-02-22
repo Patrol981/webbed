@@ -1,6 +1,8 @@
 // @ts-types="@types/three/webgpu"
 import * as THREE from "three/webgpu";
+// @ts-types="@types/three/examples/jsm/Addons"
 import {
+  OBB,
   OrbitControls,
   SkeletonUtils,
   TransformControls,
@@ -9,6 +11,7 @@ import { Signal, signal } from "@preact/signals";
 import { AssetEntity } from "./models/asset-entity.ts";
 import { getRaycastedObject } from "./raycast.ts";
 import { loadFBX } from "./fbx-handler.ts";
+import { UserData } from "./models/user-data.ts";
 
 export class Engine {
   private scene: THREE.Scene;
@@ -20,8 +23,8 @@ export class Engine {
   private camera: THREE.Camera;
   private thumbnailCamera: THREE.Camera;
 
-  private orbitControls: OrbitControls;
-  private transformControls: TransformControls;
+  private orbitControls!: OrbitControls;
+  private transformControls!: TransformControls;
   private transformGuizmo;
   private clock!: THREE.Clock;
   private raycaster!: THREE.Raycaster;
@@ -132,19 +135,35 @@ export class Engine {
   ): THREE.Object3D | null {
     if (clone) {
       const clonedObj = SkeletonUtils.clone(obj);
+      let min = new THREE.Vector3();
+      let max = new THREE.Vector3();
       clonedObj.traverse((child) => {
         if (child instanceof THREE.Mesh || child instanceof THREE.SkinnedMesh) {
-          const geometry = child.geometry;
+          const geometry = child.geometry as THREE.BufferGeometry;
           if (geometry) {
             geometry.computeVertexNormals();
             geometry.computeBoundingBox();
             geometry.computeBoundingSphere();
             geometry.attributes.position.needsUpdate = true;
+
+            if (geometry.boundingBox!.min < min) {
+              min = geometry.boundingBox!.min;
+            }
+            if (geometry.boundingBox!.max > max) {
+              max = geometry.boundingBox!.max;
+            }
           }
         }
       });
       this.scene.add(clonedObj);
       clonedObj.matrixAutoUpdate = true;
+      const aabb = new THREE.Box3().setFromObject(clonedObj);
+      const obb = new OBB().fromBox3(aabb);
+      const userData: UserData = {
+        obb: obb,
+      };
+      clonedObj.userData = userData;
+      console.log(clonedObj);
       return clonedObj;
     } else {
       this.scene.add(obj);

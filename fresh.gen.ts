@@ -10,6 +10,7 @@ import * as $api_joke from "./routes/api/joke.ts";
 import * as $greet_name_ from "./routes/greet/[name].tsx";
 import * as $index from "./routes/index.tsx";
 import * as $EngineIsland from "./islands/EngineIsland.tsx";
+import * as $UserSettingsIsland from "./islands/UserSettingsIsland.tsx";
 import type { Manifest } from "$fresh/server.ts";
 
 const manifest = {
@@ -24,6 +25,7 @@ const manifest = {
   },
   islands: {
     "./islands/EngineIsland.tsx": $EngineIsland,
+    "./islands/UserSettingsIsland.tsx": $UserSettingsIsland,
   },
   baseUrl: import.meta.url,
 } satisfies Manifest;

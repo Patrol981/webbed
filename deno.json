@@ -11,6 +11,7 @@
   },
   "lint": { "rules": { "tags": ["fresh", "recommended"] } },
   "exclude": ["**/_fresh/*"],
+  "nodeModulesDir": "auto",
   "imports": {
     "$fresh/": "https://deno.land/x/fresh@1.7.3/",
     "@babylonjs/core": "npm:@babylonjs/core@^7.48.3",
@@ -21,7 +22,10 @@
     "@preact/signals": "https://esm.sh/*@preact/signals@1.2.2",
     "@preact/signals-core": "https://esm.sh/*@preact/signals-core@1.5.1",
     "$std/": "https://deno.land/std@0.216.0/",
-    "three": "npm:three@^0.173.0"
+    "three": "npm:three@^0.173.0",
+    "tailwindcss": "npm:tailwindcss@3.4.1",
+    "tailwindcss/": "npm:/tailwindcss@3.4.1/",
+    "tailwindcss/plugin": "npm:/tailwindcss@3.4.1/plugin.js"
   },
   "compilerOptions": {
     "jsx": "react-jsx",

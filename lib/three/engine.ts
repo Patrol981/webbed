@@ -240,7 +240,8 @@ export class Engine {
 
     while (currentObj) {
       if (
-        currentObj === this.sceneGrid || currentObj === this.transformGuizmo
+        currentObj === this.sceneGrid ||
+        currentObj === this.transformGuizmo
       ) {
         return true;
       }

@@ -4,15 +4,15 @@ import {
   useContext,
   useEffect,
   useLayoutEffect,
-  useMemo,
   useRef,
   useState,
 } from "preact/hooks";
-import { Signal, useSignal } from "@preact/signals";
 import { Engine } from "../lib/three/engine.ts";
 import { createContext, JSX } from "preact";
 import { AssetsComponent } from "../components/assets/AssetsComponent.tsx";
 import { AssetRecord } from "../lib/three/models/asset-entity.ts";
+import { UserSettingsProvider } from "./UserSettingsIsland.tsx";
+import TextureSettingsComponent from "../components/texture-settings/TextureSettingsComponent.tsx";
 
 const EngineContext = createContext<MutableRef<Engine | null> | null>(null);
 
@@ -77,7 +77,10 @@ export default function EngineIsland() {
 
   return (
     <EngineProvider>
-      <AssetsComponent assetRecord={directories} />
+      <UserSettingsProvider>
+        <TextureSettingsComponent />
+        <AssetsComponent assetRecord={directories} />
+      </UserSettingsProvider>
     </EngineProvider>
   );
 }

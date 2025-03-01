@@ -33,8 +33,6 @@ export async function loadGLB(
     BABYLON.Texture.NEAREST_NEAREST,
   );
 
-  console.log(result);
-
   result.materials.forEach((mat) => {
     if (mat instanceof BABYLON.PBRMaterial) {
       const pbr = mat as BABYLON.PBRMaterial;
@@ -49,15 +47,7 @@ export async function loadGLB(
     }
   });
 
-  // result.meshes.forEach((mesh) => {
-  //   // const mat = new BABYLON.StandardMaterial("_diffuse", scene);
-  //   // mat.diffuseTexture = texture;
-  //   mesh.material = result.materials[0];
-  // });
-
   result.addAllToScene();
-
-  console.log(rootNode);
 
   return result;
 }

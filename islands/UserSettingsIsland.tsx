@@ -11,7 +11,7 @@ export const useUserSettings = () => {
 };
 
 export function UserSettingsProvider(
-  { children }: { children: JSX.Element[] },
+  { children }: { children: JSX.Element | JSX.Element[] },
 ) {
   const userSettingsRef = useRef<UserSettings | null>(null);
 

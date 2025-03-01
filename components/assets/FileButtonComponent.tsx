@@ -1,5 +1,5 @@
 import { JSX } from "preact";
-import { Dispatch, StateUpdater, useEffect } from "preact/hooks";
+import { Dispatch, StateUpdater, useEffect, useState } from "preact/hooks";
 import { AssetEntity } from "../../lib/three/models/asset-entity.ts";
 import { Signal } from "@preact/signals";
 // @ts-types="@types/three/webgpu"
@@ -30,11 +30,24 @@ const buttonStyle: JSX.CSSProperties = {
   justifyItems: "center",
   alignContent: "flex-start",
   alignItems: "middle",
-  marginLeft: "0.25em",
-  marginRight: "0.25em",
+  marginLeft: "0",
+  marginRight: "0",
+  marginTop: "1em",
+  paddingTop: "0.25em",
+  paddingBottom: "0.25em",
+  paddingLeft: "1.5em",
+  paddingRight: "1.5em",
   overflow: "hidden",
   textOverflow: "ellipsis",
   whiteSpace: "no-wrap",
+  transition: "0.2s all ease",
+  borderRadius: "24px",
+};
+
+const buttonStyleHover: JSX.CSSProperties = {
+  background: "white",
+  color: "#1d1d1d",
+  cursor: "pointer",
 };
 
 const textStyle: JSX.CSSProperties = {
@@ -49,8 +62,13 @@ const imgStyle: JSX.CSSProperties = {
   height: "6em",
 };
 
+const imgStyleHover: JSX.CSSProperties = {
+  filter: "invert(100%)",
+};
+
 export function FileButtonComponent(props: Props) {
   const engine = useEngine();
+  const [hover, setHover] = useState(false);
 
   let model: THREE.Group | THREE.Object3D | null = null;
 
@@ -65,14 +83,28 @@ export function FileButtonComponent(props: Props) {
   };
 
   const getIcon = () => {
-    // console.log(props.engine);
     if (props.isBackButton) {
-      return <img style={imgStyle} src="folder_open.svg"></img>;
+      return (
+        <img
+          style={{ ...imgStyle, ...(hover ? imgStyleHover : null) }}
+          src="folder_open.svg"
+        />
+      );
     } else {
       if (props.type === "folder") {
-        return <img style={imgStyle} src="folder.svg"></img>;
+        return (
+          <img
+            style={{ ...imgStyle, ...(hover ? imgStyleHover : null) }}
+            src="folder.svg"
+          />
+        );
       } else {
-        return <img style={imgStyle} src="file.svg"></img>;
+        return (
+          <img
+            style={{ ...imgStyle, ...(hover ? imgStyleHover : null) }}
+            src="file.svg"
+          />
+        );
       }
     }
   };
@@ -84,6 +116,7 @@ export function FileButtonComponent(props: Props) {
         event.y,
         engine!.current!.Raycaster,
         engine!.current!.Camera,
+        engine!.current!,
       );
 
       model.position.set(x, y, z);
@@ -96,12 +129,9 @@ export function FileButtonComponent(props: Props) {
         props.name,
         engine!.current?.Assets?.value!,
       );
-      console.log(target);
       if (!engine!.current?.Assets?.value[0].model) return;
       model = engine!.current.addToScene(target[0].model!, true);
       model?.scale.set(0.02, 0.02, 0.02);
-
-      console.log(engine);
     }
   };
 
@@ -112,6 +142,7 @@ export function FileButtonComponent(props: Props) {
         event.clientY,
         engine!.current!.Raycaster,
         engine!.current!.Camera,
+        engine!.current!,
       );
       model?.position.set(x, y, z);
       model = null;
@@ -120,7 +151,7 @@ export function FileButtonComponent(props: Props) {
 
   return (
     <div
-      style={buttonStyle}
+      style={{ ...buttonStyle, ...(hover ? buttonStyleHover : null) }}
       onClick={() => {
         redirectToTarget();
       }}
@@ -128,6 +159,8 @@ export function FileButtonComponent(props: Props) {
       onDragStart={onDragStart}
       onDrag={onDragUpdate}
       onDragEnd={onDragEnd}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
     >
       {getIcon()}
       {!props.isBackButton ? <p style={textStyle}>{props.name}</p> : ""}

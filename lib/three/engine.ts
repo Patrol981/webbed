@@ -2,6 +2,7 @@
 import * as THREE from "three/webgpu";
 // @ts-types="@types/three/examples/jsm/Addons"
 import {
+  FirstPersonControls,
   OBB,
   OrbitControls,
   SkeletonUtils,
@@ -12,6 +13,7 @@ import { AssetEntity } from "./models/asset-entity.ts";
 import { getRaycastedObject } from "./raycast.ts";
 import { loadFBX } from "./fbx-handler.ts";
 import { UserData } from "./models/user-data.ts";
+import { HierarchyItem } from "./models/hierarchy-item.ts";
 
 export class Engine {
   private scene: THREE.Scene;
@@ -20,14 +22,16 @@ export class Engine {
   private renderer!: THREE.Renderer;
   private thumbnailRenderer!: THREE.Renderer;
 
-  private camera: THREE.Camera;
+  private camera!: THREE.Camera;
   private thumbnailCamera: THREE.Camera;
 
   private orbitControls!: OrbitControls;
+  private firstPersonControls!: FirstPersonControls;
   private transformControls!: TransformControls;
   private transformGuizmo;
   private clock!: THREE.Clock;
   private raycaster!: THREE.Raycaster;
+  private rightMouseDown: boolean = false;
 
   private sceneGrid!: THREE.GridHelper;
 
@@ -41,21 +45,13 @@ export class Engine {
     this.scene.background = new THREE.Color("rgb(200,200,200)");
     this.thumbnailScene.background = new THREE.Color("rgb(154, 157, 177)");
 
-    this.camera = new THREE.PerspectiveCamera(
-      75,
-      globalThis.innerWidth / globalThis.innerHeight,
-      0.1,
-      1000,
-    );
     this.thumbnailCamera = new THREE.PerspectiveCamera(
-      75,
+      50,
       512 / 512,
       0.1,
       1000,
     );
 
-    this.camera.position.z = 5;
-    this.camera.position.y = 2;
     this.thumbnailCamera.position.z = 150;
     this.thumbnailCamera.position.y = 100;
     this.thumbnailCamera.position.x = 0;
@@ -65,7 +61,9 @@ export class Engine {
     console.log("init engine");
 
     this.renderer = new THREE.WebGPURenderer({ canvas: cnv, alpha: false });
-    this.renderer.setSize(globalThis.innerWidth, globalThis.innerHeight);
+    this.resize();
+    this.camera.position.z = 5;
+    this.camera.position.y = 2;
 
     this.thumbnailRenderer = new THREE.WebGPURenderer({
       canvas: undefined,
@@ -77,10 +75,19 @@ export class Engine {
     this.setupLights(this.thumbnailScene);
     this.sceneGrid = this.setupGrid();
 
-    this.orbitControls = new OrbitControls(
+    // this.orbitControls = new OrbitControls(
+    //   this.camera,
+    //   this.renderer.domElement,
+    // );
+    this.firstPersonControls = new FirstPersonControls(
       this.camera,
       this.renderer.domElement,
     );
+    this.firstPersonControls.lookSpeed = 0.5;
+    this.firstPersonControls.movementSpeed = 0;
+    this.firstPersonControls.lookVertical = true;
+    this.firstPersonControls?.handleResize();
+
     this.transformControls = new TransformControls(
       this.camera,
       this.renderer.domElement,
@@ -99,15 +106,15 @@ export class Engine {
     // this.testModel();
   }
 
-  public async testModel() {
-    const model = await loadFBX(
-      "/fbx/Characters/Individual/Characters/SM_Chr_Priest_Female_01.fbx",
-      "/textures/PolygonDarkFantasy_Texture_02_A.png",
-    );
-    model?.position.set(0, 0, 0);
-    model?.scale.set(0.3, 0.3, 0.3);
-    this.scene.add(model!);
-  }
+  // public async testModel() {
+  //   const model = await loadFBX(
+  //     "/fbx/Characters/Individual/Characters/SM_Chr_Priest_Female_01.fbx",
+  //     "/textures/PolygonDarkFantasy_Texture_02_A.png",
+  //   );
+  //   model?.position.set(0, 0, 0);
+  //   model?.scale.set(0.3, 0.3, 0.3);
+  //   this.scene.add(model!);
+  // }
 
   public async render(): Promise<void> {
     await this.thumbnailRenderer.renderAsync(
@@ -115,6 +122,9 @@ export class Engine {
       this.thumbnailCamera,
     );
     await this.renderer.renderAsync(this.scene, this.camera);
+    if (this.rightMouseDown) {
+      this.firstPersonControls?.update(this.clock.getDelta());
+    }
   }
 
   public async renderThumbnail(): Promise<string> {
@@ -127,6 +137,24 @@ export class Engine {
     const outputData = this.thumbnailRenderer.domElement.toDataURL("image/png");
     this.thumbnailRenderer.setRenderTarget(null);
     return outputData;
+  }
+
+  public resize(): void {
+    const target = document.getElementById("content-id-hook")
+      ?.getBoundingClientRect();
+    this.renderer.setSize(
+      target?.width ?? 100,
+      target?.height ?? 100,
+    );
+
+    this.camera = new THREE.PerspectiveCamera(
+      50,
+      (target?.width ?? 100) / (target?.height ?? 100),
+      0.1,
+      1000,
+    );
+
+    this.firstPersonControls?.handleResize();
   }
 
   public addToScene(
@@ -172,6 +200,36 @@ export class Engine {
     }
   }
 
+  public getHierarchy(): HierarchyItem[] {
+    const items: HierarchyItem[] = [];
+
+    const sceneItem: HierarchyItem = {
+      parent: null,
+      children: items,
+
+      refId: this.scene.id,
+      refName: this.scene.name,
+      refUUID: this.scene.uuid,
+      refType: this.scene.type,
+    };
+
+    this.scene.children.forEach((child) => {
+      const item: HierarchyItem = {
+        parent: sceneItem,
+        children: [],
+
+        refId: child.id,
+        refName: child.name,
+        refUUID: child.uuid,
+        refType: child.type,
+      };
+
+      items.push(item);
+    });
+
+    return items;
+  }
+
   public setupThumbnailScene(
     obj: THREE.Group | THREE.Mesh,
   ): THREE.Group | THREE.Mesh {
@@ -187,11 +245,25 @@ export class Engine {
   }
 
   private setupEventListeners() {
+    globalThis.addEventListener("resize", () => {
+      this.resize();
+    });
+
     this.transformControls.addEventListener("dragging-changed", (event) => {
       this.orbitControls.enabled = !event.value;
     });
 
+    document.addEventListener("mouseup", (event: MouseEvent) => {
+      if (event.button === 2) {
+        this.rightMouseDown = false;
+      }
+    });
+
     document.addEventListener("mousedown", (event: MouseEvent) => {
+      if (event.button === 2) {
+        this.rightMouseDown = true;
+      }
+
       if (event.button !== 0) return;
       const obj = getRaycastedObject(
         event.clientX,
@@ -199,6 +271,7 @@ export class Engine {
         this.raycaster,
         this.camera,
         this.scene,
+        this,
       );
       if (obj && !this.isHelperObject(obj)) {
         console.log(obj);
@@ -235,7 +308,7 @@ export class Engine {
     });
   }
 
-  private isHelperObject(obj: THREE.Object3D): boolean {
+  public isHelperObject(obj: THREE.Object3D): boolean {
     let currentObj: THREE.Object3D | null = obj;
 
     while (currentObj) {

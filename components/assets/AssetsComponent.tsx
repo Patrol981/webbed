@@ -1,4 +1,3 @@
-import { Signal } from "@preact/signals";
 import { useEffect, useState } from "preact/hooks";
 import {
   AssetEntity,
@@ -18,19 +17,18 @@ interface Props {
 }
 
 const panelStyle: JSX.CSSProperties = {
-  position: "absolute",
-  width: "100vw",
+  width: "100%",
   height: "15rem",
-  backgroundColor: "rgba(35, 35, 35, 0.5)",
-  bottom: 0,
-  left: 0,
-  overflowY: "scroll",
+  backgroundColor: "rgba(35, 35, 35, 1)",
+  alignSelf: "flex-end",
+  zIndex: 15,
+  pointerEvents: "all",
 };
 
 const dirContentStyle: JSX.CSSProperties = {
-  position: "absolute",
+  position: "relative",
   width: "100%",
-  height: "90%",
+  height: "100%",
   bottom: 0,
   right: 0,
   overflowY: "scroll",
@@ -46,52 +44,17 @@ const dirContentStyle: JSX.CSSProperties = {
 export function AssetsComponent(props: Props) {
   const [currentDirectory, setCurrentDirectory] = useState<string | null>(null);
   const [dirContent, setDirContent] = useState<DirectoryRecord | null>(null);
-  // const [asset, setAsset] = useState<AssetEntity | null>(null)
   const engine = useEngine();
 
-  if (!engine) {
-    return <div>Loading Engine...</div>; // Prevents crash if engine is still initializing
-  }
-
-  function getUnmatchedStrings(
-    strings: string[],
-    assets: AssetEntity[],
-  ): string[] {
-    const assetPaths = new Set(
-      assets.map((asset) => asset.path).filter(Boolean) as string[],
-    );
-    return strings.filter((str) => !assetPaths.has(str));
-  }
-
-  async function processPaths(unique: string[]) {
-    const texturePath = "/textures/PolygonDarkFantasy_Texture_02_A.png";
-    for (const assetPath of unique) {
-      const asset: AssetEntity = {
-        model: await loadFBX(assetPath, texturePath),
-        path: assetPath,
-        texturePath: texturePath,
-      };
-      engine?.current?.Assets?.value.push(asset);
-    }
-  }
-
   useEffect(() => {
-    console.log(props.assetRecord);
     setCurrentDirectory("/static/fbx");
-    // const targetAsset = props.assets?.value.filter((val) => {
-    //   return val.path ===
-    // })
-    // setAsset();
   }, [props.assetRecord]);
 
   useEffect(() => {
     const fetchDir = async () => {
-      console.log("setting path to" + currentDirectory);
       const result = await fetch(`/api/cd?path=${currentDirectory}`);
       const json = await result.json() as DirectoryRecord;
       setDirContent(json);
-
-      // engine.testModel();
     };
 
     fetchDir();
@@ -108,21 +71,55 @@ export function AssetsComponent(props: Props) {
         fixedDirectory += "/";
       }
 
-      // console.log(currentDirectory);
-      // console.log(fixedDirectory);
-
       Object.entries(dirContent).map(([name, type]) => (
-        // console.log(`${currentDirectory}/${name}`)
         type === "file" ? assetsToCheck.push(`${fixedDirectory}/${name}`) : ""
       ));
 
       const unique = getUnmatchedStrings(
         assetsToCheck,
-        engine.current?.Assets?.value ?? [],
+        engine?.current?.Assets?.value ?? [],
       );
       processPaths(unique);
     }
   }, [dirContent]);
+
+  if (!engine) {
+    return <div>Loading Engine...</div>;
+  }
+
+  function getUnmatchedStrings(
+    strings: string[],
+    assets: AssetEntity[],
+  ): string[] {
+    const assetPaths = new Set(
+      assets.map((asset) => asset.path).filter(Boolean) as string[],
+    );
+    return strings.filter((str) => !assetPaths.has(str));
+  }
+
+  async function processPaths(unique: string[]) {
+    const texturePath = "/textures/PolygonDarkFantasy_Texture_02_A.png";
+    const result = await fetch(`/api/cd?path=/static/textures`);
+    const json = await result.json() as DirectoryRecord;
+    const paths: string[] = [];
+    Object.entries(json).map(([name, type]) => {
+      paths.push(name);
+    });
+
+    for (const assetPath of unique) {
+      const asset: AssetEntity = {
+        model: await loadFBX(
+          assetPath,
+          "/textures",
+          paths,
+          texturePath,
+        ),
+        path: assetPath,
+        texturePath: texturePath,
+      };
+      engine?.current?.Assets?.value.push(asset);
+    }
+  }
 
   const renderListBrowser = () => {
     return (

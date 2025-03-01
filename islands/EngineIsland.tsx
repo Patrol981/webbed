@@ -13,6 +13,16 @@ import { AssetsComponent } from "../components/assets/AssetsComponent.tsx";
 import { AssetRecord } from "../lib/three/models/asset-entity.ts";
 import { UserSettingsProvider } from "./UserSettingsIsland.tsx";
 import TextureSettingsComponent from "../components/texture-settings/TextureSettingsComponent.tsx";
+import TextureListComponent from "../components/texture-settings/TextureListComponent.tsx";
+import FlexComponent from "../components/layout/FlexComponent.tsx";
+import ToolbarComponent from "../components/toolbar/ToolbarComponent.tsx";
+import GridComponent from "../components/layout/GridComponent.tsx";
+import FlexboxComponent from "../components/layout/FlexboxComponent.tsx";
+import HierarchyListComponent from "../components/hierarchy/HierarchyListComponent.tsx";
+
+interface Props {
+  cnv: Ref<HTMLCanvasElement>;
+}
 
 const EngineContext = createContext<MutableRef<Engine | null> | null>(null);
 
@@ -22,16 +32,14 @@ export const useEngine = () => {
 };
 
 const canvasStyle: JSX.CSSProperties = {
-  height: "100vh",
-  width: "100vw",
+  width: "1000px",
+  height: "100px",
   background: "#474747",
-  position: "fixed",
-  left: 0,
-  top: 0,
 };
 
-export function EngineProvider({ children }: { children: JSX.Element }) {
-  const cnv: Ref<HTMLCanvasElement> = useRef(null);
+export function EngineProvider(
+  { cnv, children }: Props & { children: JSX.Element },
+) {
   const engineRef = useRef<Engine | null>(null);
 
   async function run() {
@@ -56,7 +64,6 @@ export function EngineProvider({ children }: { children: JSX.Element }) {
 
   return (
     <EngineContext.Provider value={engineRef}>
-      <canvas style={canvasStyle} ref={cnv}></canvas>
       {children}
     </EngineContext.Provider>
   );
@@ -64,6 +71,7 @@ export function EngineProvider({ children }: { children: JSX.Element }) {
 
 export default function EngineIsland() {
   const [directories, setDir] = useState<AssetRecord | undefined>(undefined);
+  const cnv: Ref<HTMLCanvasElement> = useRef(null);
 
   useEffect(() => {
     const loadDirs = async () => {
@@ -74,12 +82,18 @@ export default function EngineIsland() {
 
     loadDirs();
   }, []);
+  // <TextureSettingsComponent />
 
   return (
-    <EngineProvider>
+    <EngineProvider cnv={cnv}>
       <UserSettingsProvider>
-        <TextureSettingsComponent />
-        <AssetsComponent assetRecord={directories} />
+        <FlexboxComponent>
+          <ToolbarComponent />
+          <HierarchyListComponent />
+          <canvas style={canvasStyle} ref={cnv}></canvas>
+          <TextureListComponent />
+          <AssetsComponent assetRecord={directories} />
+        </FlexboxComponent>
       </UserSettingsProvider>
     </EngineProvider>
   );

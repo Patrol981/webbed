@@ -14,6 +14,11 @@ import { getRaycastedObject } from "./raycast.ts";
 import { loadFBX } from "./fbx-handler.ts";
 import { UserData } from "./models/user-data.ts";
 import { HierarchyItem } from "./models/hierarchy-item.ts";
+import {
+  setupCameraLook,
+  setupCameraMovement,
+  updateCameraMovement,
+} from "./camera.ts";
 
 export class Engine {
   private scene: THREE.Scene;
@@ -26,12 +31,13 @@ export class Engine {
   private thumbnailCamera: THREE.Camera;
 
   private orbitControls!: OrbitControls;
-  private firstPersonControls!: FirstPersonControls;
   private transformControls!: TransformControls;
   private transformGuizmo;
   private clock!: THREE.Clock;
   private raycaster!: THREE.Raycaster;
   private rightMouseDown: boolean = false;
+  private prevMousePos = { x: 0, y: 0 };
+  private keys = {};
 
   private sceneGrid!: THREE.GridHelper;
 
@@ -79,14 +85,6 @@ export class Engine {
     //   this.camera,
     //   this.renderer.domElement,
     // );
-    this.firstPersonControls = new FirstPersonControls(
-      this.camera,
-      this.renderer.domElement,
-    );
-    this.firstPersonControls.lookSpeed = 0.5;
-    this.firstPersonControls.movementSpeed = 0;
-    this.firstPersonControls.lookVertical = true;
-    this.firstPersonControls?.handleResize();
 
     this.transformControls = new TransformControls(
       this.camera,
@@ -123,7 +121,7 @@ export class Engine {
     );
     await this.renderer.renderAsync(this.scene, this.camera);
     if (this.rightMouseDown) {
-      this.firstPersonControls?.update(this.clock.getDelta());
+      updateCameraMovement(this);
     }
   }
 
@@ -148,13 +146,11 @@ export class Engine {
     );
 
     this.camera = new THREE.PerspectiveCamera(
-      50,
+      75,
       (target?.width ?? 100) / (target?.height ?? 100),
       0.1,
       1000,
     );
-
-    this.firstPersonControls?.handleResize();
   }
 
   public addToScene(
@@ -253,17 +249,10 @@ export class Engine {
       this.orbitControls.enabled = !event.value;
     });
 
-    document.addEventListener("mouseup", (event: MouseEvent) => {
-      if (event.button === 2) {
-        this.rightMouseDown = false;
-      }
-    });
+    setupCameraLook(this);
+    setupCameraMovement(this);
 
     document.addEventListener("mousedown", (event: MouseEvent) => {
-      if (event.button === 2) {
-        this.rightMouseDown = true;
-      }
-
       if (event.button !== 0) return;
       const obj = getRaycastedObject(
         event.clientX,
@@ -365,6 +354,26 @@ export class Engine {
 
   public get Raycaster() {
     return this.raycaster;
+  }
+
+  public get Keys() {
+    return this.keys;
+  }
+
+  public get RightMouseButtonDown() {
+    return this.rightMouseDown;
+  }
+
+  public set RightMouseButtonDown(value: boolean) {
+    this.rightMouseDown = value;
+  }
+
+  public get PreviousMousePosition() {
+    return this.prevMousePos;
+  }
+
+  public set PreviousMousePosition(value: { x: number; y: number }) {
+    this.prevMousePos = value;
   }
 
   public get Assets(): Signal<AssetEntity[]> {
